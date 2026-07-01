@@ -1,0 +1,848 @@
+{
+  "name": "Xperience WebHook Lead Management (Support JD SubWorkflow)",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2a58dcdf-700a-4aca-9378-9a6d15f00f8b",
+              "name": "=cv_post_file",
+              "value": "cv_post_file",
+              "type": "binary"
+            },
+            {
+              "name": "jd_post_file",
+              "value": "=jd_post_file",
+              "type": "binary",
+              "id": "812d71ca-443d-4bef-a9ef-4f9527898903"
+            },
+            {
+              "id": "1e858b5d-27e7-4cba-8d03-590f28c209c0",
+              "name": "prompt_employer",
+              "value": "=You are an expert Technical Recruiter and HR Analyst. Your task is to evaluate a candidate's resume (CV) against a specific Job Description (JD) to assist the Hiring Manager in the screening process.\n\nPlease analyze the provided CV and JD, then provide a structured evaluation. Be objective, highlighting both the candidate's strengths and missing qualifications based strictly on the JD requirements.\n\nCRITICAL RULES FOR ANALYSIS:\n1. Keyword Exclusivity: A skill, technology, or qualification CANNOT appear in both 'key_strengths' and 'missing_qualifications'. If the CV demonstrates it, it is a strength. If the JD requires it but the CV lacks it, it is missing.\n2. Score & Recommendation Consistency: The 'recommendation' MUST strictly align with the 'match_score' based on these ranges:\n   - Score 80-100 MUST be \"Strong Hire\"\n   - Score 65-79 MUST be \"Interview\"\n   - Score 50-64 MUST be \"Keep in View\"\n   - Score 0-49 MUST be \"Reject\"\n3. Objective Tone: Provide actionable, concise feedback suitable for a Hiring Manager to read.\n\nJob Position: {{ $json.Position }}\nJob Description: {{ $json.Description }}\nCandidate CV: {{ $json.cv_text }}\n\nAnalyze the match and provide the output strictly in the requested JSON format.",
+              "type": "string"
+            },
+            {
+              "id": "31edc088-c361-4a5f-ab38-5ff838bc818c",
+              "name": "json_schema_employer",
+              "value": "={\n  \"name\": \"candidate_screening_analysis\",\n  \"description\": \"Evaluation of a candidate's resume against a target Job Description for hiring managers.\",\n  \"strict\": true,\n  \"schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"candidate_name\": {\n        \"type\": \"string\",\n        \"description\": \"The full name of the candidate. If not found, output 'Unknown'.\"\n      },\n      \"email_address\": {\n        \"type\": \"string\",\n        \"description\": \"The email address of the candidate found in the CV. If not found, output 'Not Provided'.\"\n      },\n      \"contact_phone\": {\n        \"type\": \"string\",\n        \"description\": \"The contact phone number of the candidate found in the CV. If not found, output 'Not Provided'.\"\n      },\n      \"match_score\": {\n        \"type\": \"integer\",\n        \"description\": \"A score from 0 to 100 representing how well the candidate matches the job description.\"\n      },\n      \"key_strengths\": {\n        \"type\": \"array\",\n        \"description\": \"Top 3 to 5 skills or experiences the candidate possesses that perfectly align with the JD.\",\n        \"items\": {\n          \"type\": \"string\"\n        }\n      },\n      \"missing_qualifications\": {\n        \"type\": \"array\",\n        \"description\": \"Key skills, keywords, or requirements mentioned in the JD that are missing from the candidate's CV.\",\n        \"items\": {\n          \"type\": \"string\"\n        }\n      },\n      \"recommendation\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"Strong Hire\",\n          \"Interview\",\n          \"Keep in View\",\n          \"Reject\"\n        ],\n        \"description\": \"The final hiring recommendation based strictly on the match score.\"\n      },\n      \"executive_summary\": {\n        \"type\": \"string\",\n        \"description\": \"A 2-3 sentence objective summary for the Hiring Manager, explaining the score and whether the candidate should be interviewed.\"\n      }\n    },\n    \"required\": [\n      \"candidate_name\",\n      \"email_address\",\n      \"contact_phone\",\n      \"match_score\",\n      \"key_strengths\",\n      \"missing_qualifications\",\n      \"recommendation\",\n      \"executive_summary\"\n    ],\n    \"additionalProperties\": false\n  }\n}",
+              "type": "string"
+            },
+            {
+              "id": "8ce709e6-aaba-4b33-babd-6382188165e1",
+              "name": "prompt_jobseeker",
+              "value": "=You are an expert Career Coach and Resume Optimization Specialist. Your task is to evaluate my resume (CV) against a target Job Description (JD) to help me understand my current fit and identify areas for improvement.\n\nPlease analyze my provided CV and the JD, then provide a structured evaluation. Be objective, highlighting my key strengths that perfectly align with the role, and explicitly listing any missing skills, keywords, or qualifications required by the JD that I need to address or add to my resume. \n\nCRITICAL RULES FOR ANALYSIS:\n1. Keyword Exclusivity: A skill or keyword CANNOT appear in both 'key_strengths' and 'missing_keywords'. If the CV demonstrates the skill, it goes to strengths. If the JD requires it but the CV lacks it, it goes to missing.\n2. Score & Readiness Consistency: The 'readiness_level' MUST strictly align with the 'match_score' based on these ranges:\n   - Score 80-100 MUST be \"Ready to Apply\"\n   - Score 60-79 MUST be \"Needs Minor Tweaks\"\n   - Score 40-59 MUST be \"Needs Major Revision\"\n   - Score 0-39 MUST be \"Not a Good Fit\"\n\nTarget Job Position: {{ $json.Position }} \nTarget Job Description: {{ $json.Description }} \nMy CV: {{ $json.cv_text }}  \n\nAnalyze the match and provide the output strictly in the requested JSON format.",
+              "type": "string"
+            },
+            {
+              "id": "6a04156f-8736-4568-bcc3-4796ab9e0eb9",
+              "name": "job_schema_jobseeker",
+              "value": "={\n  \"name\": \"resume_optimization_analysis\",\n  \"description\": \"Evaluation of a job seeker's resume against a target Job Description to provide improvement feedback.\",\n  \"strict\": true,\n  \"schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"job_seeker_name\": {\n        \"type\": \"string\",\n        \"description\": \"The full name found in the resume. If not found, output 'Unknown'.\"\n      },\n      \"match_score\": {\n        \"type\": \"integer\",\n        \"description\": \"A score from 0 to 100 representing how well the current resume matches the target job description.\"\n      },\n      \"key_strengths\": {\n        \"type\": \"array\",\n        \"description\": \"Top 3 to 5 skills or experiences currently on the resume that perfectly align with the job requirements.\",\n        \"items\": {\n          \"type\": \"string\"\n        }\n      },\n      \"missing_keywords\": {\n        \"type\": \"array\",\n        \"description\": \"Key skills, keywords, or requirements mentioned in the JD that are missing or poorly highlighted in the resume.\",\n        \"items\": {\n          \"type\": \"string\"\n        }\n      },\n      \"readiness_level\": {\n        \"type\": \"string\",\n        \"enum\": [\n          \"Ready to Apply\",\n          \"Needs Minor Tweaks\",\n          \"Needs Major Revision\",\n          \"Not a Good Fit\"\n        ],\n        \"description\": \"Assessment of how ready the resume is for submission based on the current match.\"\n      },\n      \"actionable_feedback\": {\n        \"type\": \"string\",\n        \"description\": \"A 2-3 sentence summary explaining the score and providing specific advice on how to improve the resume for this role.\"\n      }\n    },\n    \"required\": [\n      \"job_seeker_name\",\n      \"match_score\",\n      \"key_strengths\",\n      \"missing_keywords\",\n      \"readiness_level\",\n      \"actionable_feedback\"\n    ],\n    \"additionalProperties\": false\n  }\n}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b4ea9cd1-3bd4-46df-a86f-95aa1bf09308",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2016,
+        -480
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "cv_data",
+        "outputPrefix": "={{ $json.output }}"
+      },
+      "id": "ae7dc53a-08f6-4347-be8c-1f49ba4f7b72",
+      "name": "Extract ZIP",
+      "type": "n8n-nodes-base.compression",
+      "position": [
+        -1488,
+        -480
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "functionCode": "return items.map(item => {\n  return Object.keys(item.binary || {}).map(k => {\n    const name = k;\n    const extension = name.split('.').pop().toLowerCase();\n    return {\n      json: {\n        filename: name,\n        fileExtension: extension,\n      },\n      binary: {\n        cv_data: item.binary[k],\n      },\n    };\n  });\n}).flat();"
+      },
+      "id": "0c694832-89c6-42ff-8693-8cd8136a433b",
+      "name": "Normalize Binary Files",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        -1280,
+        -480
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2bd8c882-517a-4c19-a97a-cf61b6a66e79",
+      "name": "Split CVs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        -768,
+        -480
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "id": "ce4a246b-5d57-4146-b485-2d05ee502574",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        -96,
+        -864
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => ({\n  json: {\n    \"Candidate ID\": item.json.candidate_name_hexed || \"\",\n    \"Executive Summary\": item.json.executive_summary || \"\",\n    \"Contact Phone\": item.json.contact_phone || \"\",\n    \"Key Strengths\": item.json.key_strengths || \"\",\n    \"Missing Qualifications\": item.json.missing_qualifications || \"\",\n    \"Match Percentage\": item.json.match_score || 0,\n    \"Recommendation\": item.json.recommendation || \"\"\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -736
+      ],
+      "id": "d190a517-df7a-472f-b4ea-31cd5c3c136d",
+      "name": "Format for Excel",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "options": {}
+      },
+      "id": "7fe13a7e-ff3e-4c9f-8c3d-ea614f220747",
+      "name": "Convert to Excel",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        432,
+        -736
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "xperience-hipaa",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2208,
+        -480
+      ],
+      "id": "9f74ad3c-70f3-4b95-9bde-b8c71f1955ca",
+      "name": "Webhook",
+      "webhookId": "fdd5e1d9-694e-4865-919a-e48b730b8eac"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $input.all().map(item => item.json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        224,
+        -944
+      ],
+      "id": "c509f413-9ae6-43cf-9248-2138441e6eb5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "return items.map(item => {\n  // Specify the exact binary property name you want to extract\n  const targetKey = 'cv_post_file'; \n\n  // Check if this binary property exists in the current item\n  if (item.binary && item.binary[targetKey]) {\n    const fileData = item.binary[targetKey];\n    const fileName = fileData.fileName;\n    const extension = fileName.split('.').pop().toLowerCase();\n\n    return {\n      json: {\n        filename: fileName,\n        fileExtension: extension,\n      },\n      binary: {\n        // We output it as 'data' so downstream nodes can easily process it\n        cv_data: fileData, \n      },\n    };\n  }\n  \n  // If the file isn't found, return the item as is (or return null to drop it)\n  return item; \n});\n\n\n/*return items.map(item => {\n  return Object.keys(item.binary || {}).map(k => {\n    const name = k;\n    const extension = name.split('.').pop().toLowerCase();\n    return {\n      json: {\n        filename: name,\n        fileExtension: extension,\n      },\n      binary: {\n        data: item.binary[k],\n      },\n    };\n  });\n}).flat();*/"
+      },
+      "id": "2085a165-1366-4e31-9cdb-961dac4d8032",
+      "name": "CV",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        -1680,
+        -480
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=cv_data",
+        "options": {}
+      },
+      "id": "a4ec0cf1-ecf6-4c2d-9304-3d3ff731b1da",
+      "name": "PDF_CV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        -448,
+        -320
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert HR data extraction engine for a recruitment SaaS platform.\nYour task is to analyze raw Curriculum Vitae (CV) or candidate profile data and map it STRICTLY into our master CV JSON schema.\n\nIMPORTANT: You must STRICTLY follow the JSON output formatting instructions provided by the Structured Output Parser. Do not deviate from the requested schema.\n\n### EXTRACTION RULES & LOGIC\n1. Strict Null Handling: If a specific piece of information is missing, return `null` or an empty array `[]`. DO NOT guess or hallucinate data.\n2. Experience: Extract the total years of working experience as an integer for 'total_experience_years'.\n3. Skills Consolidation: Combine all technical skills, languages, frameworks, and tools into the 'technical_skills' array. Put soft skills or domain knowledge into 'soft_skills_and_domain'.\n4. Summary: Consolidate the candidate's professional summary, bio, or \"About Me\" section into 'candidate_summary'."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        0,
+        -320
+      ],
+      "id": "ba0798da-ac77-435d-8541-f33f36c82b7a",
+      "name": "Extract CV"
+    },
+    {
+      "parameters": {
+        "model": "gpt-5.4",
+        "options": {
+          "maxTokens": 7000,
+          "temperature": 0,
+          "topP": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "f50d1037-6675-45b9-9eb4-54ad4ec67345",
+      "name": "Azure OpenAI Chat Model",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "EboPghdggcNzGXM2",
+          "name": "Azure Open AI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"candidate_name\": { \"type\": [\"string\", \"null\"] },\n    \"current_job_title\": { \"type\": [\"string\", \"null\"] },\n    \"total_experience_years\": { \"type\": [\"number\", \"null\"] },\n    \"candidate_summary\": { \"type\": [\"string\", \"null\"] },\n    \"technical_skills\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"soft_skills_and_domain\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } },\n    \"education\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }\n  },\n  \"required\": [\n    \"candidate_name\",\n    \"current_job_title\",\n    \"total_experience_years\",\n    \"candidate_summary\",\n    \"technical_skills\",\n    \"soft_skills_and_domain\",\n    \"education\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        0
+      ],
+      "id": "36e43888-57e6-4234-a4b4-eb93e30e7860",
+      "name": "CV Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "25c3a138-c576-45b4-8e0b-ac05016eb12d",
+              "name": "chatInput",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -176,
+        -320
+      ],
+      "id": "bc663d73-d048-462b-8490-e8b0f590d7de",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "etZ896Qn2P4gl8CH",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/etZ896Qn2P4gl8CH",
+          "cachedResultName": "Xperience WebHook Lead Management -- JD SubWorkflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "jd_post_file": "=jd_post_file"
+          },
+          "matchingColumns": [
+            "JDFile"
+          ],
+          "schema": [
+            {
+              "id": "jd_post_file",
+              "displayName": "jd_post_file",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -1552,
+        -64
+      ],
+      "id": "c458bf08-a2d0-49b0-83a0-f45a6d142bb2",
+      "name": "Call 'Xperience WebHook Lead Management -- JD SubWorkflow'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d30cbfb-1034-4d4e-8c78-fa675b3f02f9",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1264,
+        -64
+      ],
+      "id": "b957a4e8-d68b-44e2-a19a-2e13f030b4f9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1008,
+        -480
+      ],
+      "id": "ffe4cd18-e193-4df6-97a4-e6edf46eb6f1",
+      "name": "Merge_JD"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=CRITICAL SCORING RUBRIC (How to calculate the match_score out of 100):\n1. Start with a base score of 100.\n2. Deduct 10 points for each missing core qualification (e.g., lacking Python, React, Java, or GenAI platform experience).\n3. Deduct 5 points for each missing secondary skill (e.g., missing specific DevOps tools or Azure cloud specifics).\n4. Add 5 bonus points if they have \"Insurance industry knowledge\" (maximum score capped at 100).\n5. If the candidate fundamentally lacks software engineering or AI experience (e.g., purely IT infrastructure support), the score MUST be below 50.\n\n\nYou are an expert Technical Recruiter and HR Analyst. Your task is to evaluate a candidate's resume (CV) against a specific Job Description (JD). \n\nBoth the JD and CV data are provided as structured lists. Please perform a semantic comparison (understanding the meaning behind the skills, not just exact keyword matching) to evaluate the candidate.\n\nCRITICAL RULES FOR ANALYSIS:\n1. Semantic Matching: Recognize synonyms and related technologies (e.g., \"Computing\" matches \"Computer Science\").\n2. Keyword Exclusivity: A skill cannot appear in both 'key_strengths' and 'missing_qualifications'. \n3. Score & Recommendation Consistency:\n   - Score 80-100 MUST be \"Strong Hire\"\n   - Score 65-79 MUST be \"Interview\"\n   - Score 50-64 MUST be \"Keep in View\"\n   - Score 0-49 MUST be \"Reject\"\n\n--- JOB DESCRIPTION (JD) ---\nResponsibilities: {{ $('Merge_JD').item.json.responsibilities }}\nQualifications Required: {{ $('Merge_JD').item.json.qualifications }}\n\n--- CANDIDATE CV ---\nTechnical Skills: {{ $json.technical_skills }}\nEducation & Certifications: {{ $json.education }}\nCandidate Name: {{ $json.candidate_name }}\nCandidate Name Hex: candidate_{{ $json.candidate_name_hexed }}\n\nAnalyze the match based on the above lists and provide the output strictly in the requested JSON format."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        800,
+        -320
+      ],
+      "id": "7393a769-c6b1-4549-987f-63524966bbbf",
+      "name": "Evaluate Candidate"
+    },
+    {
+      "parameters": {
+        "model": "gpt-5.4",
+        "options": {
+          "maxTokens": 7000,
+          "temperature": 0,
+          "topP": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -64
+      ],
+      "id": "9107fe58-0153-43a4-8b43-8ce7eec311b7",
+      "name": "Azure OpenAI Chat Model1",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "EboPghdggcNzGXM2",
+          "name": "Azure Open AI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"candidate_name\": {\n      \"type\": \"string\",\n      \"description\": \"The full name of the candidate. If not found, output 'Unknown'.\"\n    },\n   \"candidate_name_hexed\": {\n      \"type\": \"string\",\n      \"description\": \"The full name of the candidate with Cypto. If not found, output 'Unknown'.\"\n    },\n    \"email_address\": {\n      \"type\": \"string\",\n      \"description\": \"The email address of the candidate found in the CV. If not found, output 'Not Provided'.\"\n    },\n    \"contact_phone\": {\n      \"type\": \"string\",\n      \"description\": \"The contact phone number of the candidate found in the CV. If not found, output 'Not Provided'.\"\n    },\n    \"match_score\": {\n      \"type\": \"integer\",\n      \"description\": \"A score from 0 to 100 representing how well the candidate matches the job description.\"\n    },\n    \"key_strengths\": {\n      \"type\": \"array\",\n      \"description\": \"Top 3 to 5 skills or experiences the candidate possesses that perfectly align with the JD.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"missing_qualifications\": {\n      \"type\": \"array\",\n      \"description\": \"Key skills, keywords, or requirements mentioned in the JD that are missing from the candidate's CV.\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"recommendation\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Strong Hire\",\n        \"Interview\",\n        \"Keep in View\",\n        \"Reject\"\n      ],\n      \"description\": \"The final hiring recommendation based strictly on the match score.\"\n    },\n    \"executive_summary\": {\n      \"type\": \"string\",\n      \"description\": \"A 2-3 sentence objective summary for the Hiring Manager, explaining the score and whether the candidate should be interviewed.\"\n    }\n  },\n  \"required\": [\n    \"candidate_name\",\n    \"email_address\",\n    \"contact_phone\",\n    \"match_score\",\n    \"key_strengths\",\n    \"missing_qualifications\",\n    \"recommendation\",\n    \"executive_summary\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        -64
+      ],
+      "id": "6d3c0f81-6f07-463b-a7be-621a6a17e311",
+      "name": "Evulate Pharser"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "=\n {{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        80
+      ],
+      "id": "c0a81caa-e99c-4f27-886b-2c8507d0e881",
+      "name": "Evaluate Cadidate Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "25c3a138-c576-45b4-8e0b-ac05016eb12d",
+              "name": "chatInput",
+              "value": "={{ $json.output.candidate_summary }}",
+              "type": "string"
+            },
+            {
+              "id": "ae93477f-2f84-4f4c-ac8a-7c7737418aa9",
+              "name": "candidate_name",
+              "value": "={{ $json.output.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "64ee16c2-54f6-416d-a6b6-40923c05bf60",
+              "name": "technical_skills",
+              "value": "={{ $json.output.technical_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "e8a238ad-895a-40a1-9844-56018aff4c69",
+              "name": "education",
+              "value": "={{ $json.output.education }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        -320
+      ],
+      "id": "e09b5e21-ba1e-47b1-9a47-302ce51fec72",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "content": "# Output\nArrgrated Result is being displayed here by JSON response and Excel (or Google Sheet)",
+        "height": 496,
+        "width": 944
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -1072
+      ],
+      "id": "75e0ec1a-6844-4bed-895b-50fac3d455e2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# Job Description\n\nRead JD content and then parse it to JSON by sub-workflow",
+        "height": 496,
+        "width": 944
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1824,
+        -208
+      ],
+      "id": "6bfce357-d993-4334-a942-4eda9d560f52",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# CV\n\nLoad CV packed in ZIP file and then split them\nSupport DOCX only",
+        "height": 448,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1744,
+        -720
+      ],
+      "id": "f39b3bb0-1f46-4448-b369-3d8209c1f13b",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n# Analysis\n\n",
+        "height": 880,
+        "width": 2096
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -416
+      ],
+      "id": "bfc31d7c-22de-441b-99b8-9cb952da23d5",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "value": "={{ $json.candidate_name }}",
+        "dataPropertyName": "candidate_name_hexed"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -320
+      ],
+      "id": "079fe3ee-ab21-46b7-85f7-cfc35f621cbc",
+      "name": "Crypto"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  let text = item.json.text || \"\";\n  \n  // Remove Email\n  text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g, \"[EMAIL_REDACTED]\");\n  \n  // Remove Tel No\n  text = text.replace(/\\b[235689]\\d{3}[-\\s]?\\d{4}\\b/g, \"[PHONE_REDACTED]\"); \n  \n  item.json.text = text;\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -320
+      ],
+      "id": "40cb4ce8-a622-48a1-bcb5-558168cbaa60",
+      "name": "Mask Info HIPAA"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "CV",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Call 'Xperience WebHook Lead Management -- JD SubWorkflow'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract ZIP": {
+      "main": [
+        [
+          {
+            "node": "Normalize Binary Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Binary Files": {
+      "main": [
+        [
+          {
+            "node": "Merge_JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split CVs": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PDF_CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Format for Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Excel": {
+      "main": [
+        [
+          {
+            "node": "Convert to Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Excel": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV": {
+      "main": [
+        [
+          {
+            "node": "Extract ZIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF_CV": {
+      "main": [
+        [
+          {
+            "node": "Mask Info HIPAA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract CV",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract CV",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Extract CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Xperience WebHook Lead Management -- JD SubWorkflow'": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge_JD",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_JD": {
+      "main": [
+        [
+          {
+            "node": "Split CVs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Candidate": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Cadidate Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Azure OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Evaluate Candidate",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evulate Pharser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Evaluate Candidate",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Cadidate Output": {
+      "main": [
+        [
+          {
+            "node": "Split CVs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mask Info HIPAA": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b9df4e5a-86f8-4f17-89dc-7d048a888cbc",
+  "meta": {
+    "instanceId": "3d8809dc8963dcd69511a04dc9ba3b2805dbf7ebb4e574e80850adf3f13b73e6"
+  },
+  "id": "hpvNsxbFpdwu3O0n",
+  "tags": []
+}

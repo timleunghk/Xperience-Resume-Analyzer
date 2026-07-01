@@ -1,34 +1,63 @@
-# 📄 Xperience AI Resume Analyzer (n8n Webhook Edition)
+# 📄 Xperience AI Resume Analyzer (Enterprise & HIPAA-Ready Edition)
 
-This repository contains an advanced n8n workflow that automates the resume screening process using Local LLMs. It acts as the backend engine for the Xperience AI Resume Analysis web application.
+This repository contains an advanced, enterprise-grade **n8n automation workflow** designed to revolutionize the resume screening process. Acting as the backend engine for the Xperience AI Resume Analysis platform, it evaluates candidate Curriculum Vitae (CVs) against target Job Descriptions (JDs) using Large Language Models (LLMs).
 
-## 🌟 Overview
-This workflow receives a candidate's CV and a target Job Description (JD) via a Webhook. It automatically handles file conversions, extracts text, and leverages **Llama3 (via Ollama)** to generate a structured AI analysis report. 
+**🌟 Upwork Portfolio Highlight:** 
+Unlike standard AI wrappers, this architecture is built with a **Privacy-First** approach. It implements **HIPAA-ready data minimization** and **Cryptographic anonymization** to enable unbiased "Blind Hiring" while securely leveraging Enterprise LLMs.
 
-It supports two distinct analysis modes:
-1. **Employer Mode:** Acts as a Technical Recruiter to evaluate candidate match scores, strengths, and missing qualifications for hiring managers.
-2. **Job Seeker Mode:** Acts as a Career Coach to provide actionable feedback and readiness levels for candidates.
+## 🚀 Key Features
 
-## 🚀 Features
-* **Multi-format Support:** Accepts ZIP, DOCX, and PDF files.
-* **Auto File Conversion:** Integrates with **ConvertAPI** to seamlessly convert DOCX/ZIP files into PDFs for text extraction.
-* **Local AI Processing:** Uses a local instance of Ollama (`llama3:latest`) to ensure data privacy and zero API token costs for LLM inference.
-* **Structured JSON Output:** Enforces strict JSON schemas in the LLM prompt to ensure the output is perfectly formatted for frontend consumption or Excel export.
+* **🔒 Privacy-First & HIPAA-Ready:** Automatically redacts Personally Identifiable Information (PII) such as emails and phone numbers using Regex *before* sending any data to external LLMs.
+* **🛡️ Blind Hiring Enablement:** Utilizes cryptographic hashing to anonymize candidate names, providing Hiring Managers with objective, bias-free evaluation reports.
+* **🏢 Enterprise-Grade AI Integration:** Powered by **Azure OpenAI** (GPT models) with strict System Prompts and LangChain Structured Output Parsers to guarantee 100% reliable JSON responses.
+* **📂 Advanced File Handling:** Natively processes `multipart/form-data` webhooks, automatically extracts CVs from `.zip` archives, and parses `.pdf` files without relying on expensive third-party APIs.
+* **🧩 Modular Sub-Workflow Architecture:** Separates Job Description (JD) parsing into a dedicated sub-workflow (`Support JD SubWorkflow`) for better maintainability and scalability.
+* **📊 Automated Reporting:** Aggregates AI evaluation results (Match Score, Key Strengths, Missing Qualifications) and automatically generates an Excel spreadsheet for HR teams.
+
+## ⚙️ How It Works (Architecture Flow)
+
+1. **Trigger:** A Webhook receives the candidate's CV (PDF/ZIP) and the target JD file.
+2. **Data Preparation:** 
+   - Unzips archives and extracts text from PDFs.
+   - **[Security Step]** Executes a custom JavaScript node to mask PII (Email/Phone).
+3. **AI Extraction:** Azure OpenAI extracts structured data from the CV based on a strict JSON schema.
+4. **JD Processing:** Calls a Sub-Workflow to parse and standardize the Job Description requirements.
+5. **Semantic Evaluation:** 
+   - **[Security Step]** Cryptographically hashes the candidate's name.
+   - A secondary AI Agent performs a semantic comparison between the CV and JD, calculating a definitive Match Score (0-100) and generating actionable feedback.
+6. **Output:** Returns a structured JSON response to the frontend and generates a downloadable Excel report.
 
 ## 🛠️ Prerequisites
-* An active [n8n](https://n8n.io/) instance.
-* [Ollama](https://ollama.com/) installed and running locally with the `llama3` model (`http://ollama:11434`).
-* A [ConvertAPI](https://www.convertapi.com/) account and API Secret.
 
-## ⚙️ Setup Instructions
-1. Download the `Xperience WebHook Edition.json` file.
-2. In your n8n workspace, click **Import from File** and select the JSON file.
-3. Configure the **ConvertAPI** credentials in the HTTP Request nodes.
-4. Ensure your Ollama server is accessible from your n8n instance (update the URL in the OpenAI nodes if necessary).
-5. Activate the workflow and copy the **Test/Production Webhook URL**.
+* An active [n8n](https://n8n.io/) instance (Self-hosted or Cloud).
+* An **Azure OpenAI** account with a deployed Chat Model (e.g., GPT-4o or GPT-4-turbo).
+* *Note: To maintain strict HIPAA compliance in a production environment, ensure your organization has a signed Business Associate Agreement (BAA) with Microsoft.*
+
+## 🚀 Setup Instructions
+
+1. Download both JSON files:
+   - `Xperience WebHook Lead Management -- JD SubWorkflow.json`
+   - `Xperience WebHook Lead Management (Support JD SubWorkflow).json`
+2. In your n8n workspace, import the **JD SubWorkflow** first and activate it.
+3. Import the **Main Workflow**.
+4. Inside the Main Workflow, update the `Execute Workflow` node to point to your newly imported JD SubWorkflow.
+5. Configure your **Azure OpenAI credentials** in all LLM nodes.
+6. Activate the workflow and copy your **Webhook URL**.
 
 ## 📡 Webhook Payload Structure
-Send a `POST` request (multipart/form-data) to the Webhook URL with:
-* `cv_post_file`: The candidate's CV file.
-* `jd_post_file`: The Job Description file.
-* `Mode`: String (`Employer` or `Job Seeker`).
+
+Send a `POST` request (`multipart/form-data`) to the Webhook URL with the following fields:
+
+* `cv_post_file`: The candidate's CV file (PDF or ZIP containing PDFs).
+* `jd_post_file`: The Job Description file (PDF).
+
+### Example JSON Response:
+```json
+{
+  "Candidate ID": "candidate_8f4e2a1b...",
+  "Match Percentage": 85,
+  "Recommendation": "Strong Hire",
+  "Key Strengths": ["React.js", "Node.js", "Cloud Architecture"],
+  "Missing Qualifications": ["GraphQL"],
+  "Executive Summary": "The candidate strongly matches the core requirements with extensive experience in full-stack development. Highly recommended for an interview."
+}
